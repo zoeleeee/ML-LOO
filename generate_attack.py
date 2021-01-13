@@ -87,6 +87,8 @@ if __name__ == '__main__':
 
 	ce = cross_entropy(pred_test, dataset.y_val, epsilon=1e-12)
 	acc = np.mean(np.argmax(pred_test, axis = 1) == np.argmax(dataset.y_val, axis = 1))
+        idxs = np.random.permutation(np.arange(len(pred_test))(np.argmax(pred_test, axis = 1) == np.argmax(dataset.y_val, axis = 1)))[:3000]
+        np.save('cifar10_random_idxs.npy', idxs)
 	print('The accuracy is {}. The cross entropy is {}.'.format(acc, ce))
 
 
