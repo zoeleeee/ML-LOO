@@ -114,17 +114,11 @@ def construct_original_network(dataset_name, model_name, train):
 						  metrics=['acc'])
 
 	elif model_name == 'resnet':
-		from resnet import resnet_v2, lr_schedule,  lr_schedule_sgd
+		from gat_model import Model
+		model = Model(mode='eval', var_scope='classifier')
+		image_ph = model.x_input
+		preds = model.pre_softmax 
 		
-		model, image_ph, preds = resnet_v2(input_shape=(input_size, input_size, channel), depth=20, num_classes = num_classes)
-
-		optimizer = optimizers.SGD(lr=0.1, momentum=0.9, nesterov=True)
-
-
-		model.compile(loss='categorical_crossentropy',
-				  optimizer=optimizer,
-				  metrics=['accuracy'])
-
 	elif model_name == 'densenet':
 		from densenet import DenseNet 
 		nb_filter = -1#12 if dataset_name == 'cifar100' else -1
@@ -145,10 +139,11 @@ def construct_original_network(dataset_name, model_name, train):
 	grads = tf.concat(grads, axis = 0)
 	approxs = grads * tf.expand_dims(image_ph, 0)
 
-	logits = [layer.output for layer in model.layers][-2]
-	print(logits)
+	# logits = [layer.output for layer in model.layers][-2]
+	# print(logits)
+	logits = model.logits
 		
-	sess = K.get_session()
+	sess = tf.Session()
 
 	return image_ph, preds, grads, approxs, sess, model, num_classes, logits
 
@@ -158,7 +153,7 @@ class ImageModel():
 		self.model_name = model_name
 		self.dataset_name = dataset_name
 		self.data_model = dataset_name + model_name
-		self.framework = 'keras'
+		self.framework = 'tensorflow'
 
 		# if not train:
 			# K.set_learning_phase(0)
@@ -174,8 +169,11 @@ class ImageModel():
 		if load:
 			if load == True:
 				print('Loading model weights...')
-				self.model.load_weights('{}/models/original.hdf5'.format(self.data_model), 
-					by_name=True)
+				classifier_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                    scope='classifier')
+				classifier_saver = tf.train.Saver(var_list=classifier_vars)
+				classifier_checkpoint = '../GAT/cifar10/GAT-CIFAR10/models/naturally_trained_prefixed_classifier/checkpoint-70000'
+				classifier_saver.restore(sess, classifier_checkpoint)
 			elif load != False:
 				self.model.load_weights('{}/models/{}.hdf5'.format(self.data_model, load), 
 					by_name=True)
@@ -241,207 +239,207 @@ class ImageModel():
 				verbose = 2,
 				workers = 4)
 
-	def adv_train(self, dataset, attack_name):
-		from cleverhans.attacks import FastGradientMethod, ProjectedGradientDescent
-		from cleverhans.utils_keras import KerasModelWrapper
-		from cleverhans.loss import CrossEntropy
-		from cleverhans.train import train
-		from cleverhans.utils_tf import model_eval
-		import time, datetime
+	# def adv_train(self, dataset, attack_name):
+	# 	from cleverhans.attacks import FastGradientMethod, ProjectedGradientDescent
+	# 	from cleverhans.utils_keras import KerasModelWrapper
+	# 	from cleverhans.loss import CrossEntropy
+	# 	from cleverhans.train import train
+	# 	from cleverhans.utils_tf import model_eval
+	# 	import time, datetime
 
-		if attack_name == 'fgsm' and self.dataset_name == 'mnist':
-			wrap = KerasModelWrapper(self.model)
-			params = {'eps': 0.3,
-				'clip_min': -1.,
-				'clip_max': 1.}
+	# 	if attack_name == 'fgsm' and self.dataset_name == 'mnist':
+	# 		wrap = KerasModelWrapper(self.model)
+	# 		params = {'eps': 0.3,
+	# 			'clip_min': -1.,
+	# 			'clip_max': 1.}
 
-			attacker = FastGradientMethod(wrap, sess=self.sess)
-			def attack(x):
-				return attacker.generate(x, **params)
+	# 		attacker = FastGradientMethod(wrap, sess=self.sess)
+	# 		def attack(x):
+	# 			return attacker.generate(x, **params)
 
-			preds_adv = self.model(attack(self.input_ph))
-			loss = CrossEntropy(wrap, smoothing=0.1, attack=attack)
+	# 		preds_adv = self.model(attack(self.input_ph))
+	# 		loss = CrossEntropy(wrap, smoothing=0.1, attack=attack)
 
-			y_ph = tf.placeholder(tf.float32, shape = (None, self.num_classes))
+	# 		y_ph = tf.placeholder(tf.float32, shape = (None, self.num_classes))
 
-			def evaluate():
-				# Accuracy of adversarially trained model on legitimate test inputs
-				eval_params = {'batch_size': 128}
-				accuracy = model_eval(self.sess, self.input_ph, y_ph, self.preds, dataset.x_val, dataset.y_val, args=eval_params)
-				print('Test accuracy on legitimate examples: %0.4f' % accuracy)
+	# 		def evaluate():
+	# 			# Accuracy of adversarially trained model on legitimate test inputs
+	# 			eval_params = {'batch_size': 128}
+	# 			accuracy = model_eval(self.sess, self.input_ph, y_ph, self.preds, dataset.x_val, dataset.y_val, args=eval_params)
+	# 			print('Test accuracy on legitimate examples: %0.4f' % accuracy)
 
-				# Accuracy of the adversarially trained model on adversarial examples
-				accuracy = model_eval(self.sess, self.input_ph, y_ph, preds_adv, dataset.x_val, dataset.y_val, args=eval_params)
-				print('Test accuracy on adversarial examples: %0.4f' % accuracy)
+	# 			# Accuracy of the adversarially trained model on adversarial examples
+	# 			accuracy = model_eval(self.sess, self.input_ph, y_ph, preds_adv, dataset.x_val, dataset.y_val, args=eval_params)
+	# 			print('Test accuracy on adversarial examples: %0.4f' % accuracy)
 
-			# if self.dataset_name == 'mnist':
-			train_params = {
-				'nb_epochs': 20,
-				'batch_size': 128,
-				'learning_rate': 0.001,
-				'train_dir': '{}/models'.format(self.data_model),
-				'filename': 'adv.cpkt'
-			}
+	# 		# if self.dataset_name == 'mnist':
+	# 		train_params = {
+	# 			'nb_epochs': 20,
+	# 			'batch_size': 128,
+	# 			'learning_rate': 0.001,
+	# 			'train_dir': '{}/models'.format(self.data_model),
+	# 			'filename': 'adv.cpkt'
+	# 		}
 
-			# Perform and evaluate adversarial training
-			train(self.sess, loss, dataset.x_train, dataset.y_train, evaluate=evaluate,
-				args=train_params, rng=np.random.RandomState([2017, 8, 30]))
+	# 		# Perform and evaluate adversarial training
+	# 		train(self.sess, loss, dataset.x_train, dataset.y_train, evaluate=evaluate,
+	# 			args=train_params, rng=np.random.RandomState([2017, 8, 30]))
 
-			self.model.save_weights('{}/models/{}.hdf5'.format(self.data_model, 'adv-{}'.format(attack_name)))
+	# 		self.model.save_weights('{}/models/{}.hdf5'.format(self.data_model, 'adv-{}'.format(attack_name)))
 
-		elif attack_name == 'pgd':
-			if self.dataset_name == 'mnist':
-				params = {'eps': 0.1,
-							# 'clip_min': -1.0,
-							# 'clip_max': 1.0,
-							'eps_iter': 0.01,
-							'nb_iter': 20,
-							'epochs': 100,
-							'batch_size': 50,
-							}
-			elif self.dataset_name == 'cifar10':
-				params = {'eps': 8.0 / 255 * 2,
-							# 'clip_min': -1.0,
-							# 'clip_max': 1.0,
-							'eps_iter': 2.0 / 255 * 2,
-							'nb_iter': 10,#10,#1,
-							'epochs': 200,
-							'batch_size': 128,
-							}				
+	# 	elif attack_name == 'pgd':
+	# 		if self.dataset_name == 'mnist':
+	# 			params = {'eps': 0.1,
+	# 						# 'clip_min': -1.0,
+	# 						# 'clip_max': 1.0,
+	# 						'eps_iter': 0.01,
+	# 						'nb_iter': 20,
+	# 						'epochs': 100,
+	# 						'batch_size': 50,
+	# 						}
+	# 		elif self.dataset_name == 'cifar10':
+	# 			params = {'eps': 8.0 / 255 * 2,
+	# 						# 'clip_min': -1.0,
+	# 						# 'clip_max': 1.0,
+	# 						'eps_iter': 2.0 / 255 * 2,
+	# 						'nb_iter': 10,#10,#1,
+	# 						'epochs': 200,
+	# 						'batch_size': 128,
+	# 						}				
 
-			# attacker = ProjectedGradientDescent(wrap, sess=self.sess)
+	# 		# attacker = ProjectedGradientDescent(wrap, sess=self.sess)
 
-			# import foolbox
-			# from foolbox.attacks import ProjectedGradientDescentAttack
-			from attack_model import LinfPGDAttack
-			# Main training loop
-			# fmodel = foolbox.models.KerasModel(self.model, bounds=(-1, 1), preprocessing=(0, 1))
-			attacker = LinfPGDAttack(self, params['eps'], k = params['nb_iter'], a = params['eps_iter'], clip_min = dataset.clip_min, clip_max = dataset.clip_max, 
-				random_start = True, loss_func = 'xent')
+	# 		# import foolbox
+	# 		# from foolbox.attacks import ProjectedGradientDescentAttack
+	# 		from attack_model import LinfPGDAttack
+	# 		# Main training loop
+	# 		# fmodel = foolbox.models.KerasModel(self.model, bounds=(-1, 1), preprocessing=(0, 1))
+	# 		attacker = LinfPGDAttack(self, params['eps'], k = params['nb_iter'], a = params['eps_iter'], clip_min = dataset.clip_min, clip_max = dataset.clip_max, 
+	# 			random_start = True, loss_func = 'xent')
 
-			def attack(x, y):
-				# return attacker(x, label=label, unpack=True, binary_search=False, epsilon=params['eps'], stepsize=params['eps_iter'], 
-				# 	iterations=params['nb_iter'], 
-				# 	random_start=False, return_early=True)
-				return attacker.attack(x, np.argmax(y, axis = -1))
+	# 		def attack(x, y):
+	# 			# return attacker(x, label=label, unpack=True, binary_search=False, epsilon=params['eps'], stepsize=params['eps_iter'], 
+	# 			# 	iterations=params['nb_iter'], 
+	# 			# 	random_start=False, return_early=True)
+	# 			return attacker.attack(x, np.argmax(y, axis = -1))
 
-			from resnet import lr_schedule, create_resnet_generator,  lr_schedule_sgd
-			from keras.preprocessing.image import ImageDataGenerator
+	# 		from resnet import lr_schedule, create_resnet_generator,  lr_schedule_sgd
+	# 		from keras.preprocessing.image import ImageDataGenerator
 
-			# datagen = create_resnet_generator(dataset.x_train)
-			datagen = ImageDataGenerator(rotation_range=15,
-				width_shift_range=5./32,
-				height_shift_range=5./32,
-				horizontal_flip = True,
-				zoom_range = 0.2)
+	# 		# datagen = create_resnet_generator(dataset.x_train)
+	# 		datagen = ImageDataGenerator(rotation_range=15,
+	# 			width_shift_range=5./32,
+	# 			height_shift_range=5./32,
+	# 			horizontal_flip = True,
+	# 			zoom_range = 0.2)
 
-			datagen.fit(dataset.x_train, seed=0)
+	# 		datagen.fit(dataset.x_train, seed=0)
 
-			xent = tf.reduce_mean(K.categorical_crossentropy(self.y_ph, self.preds), name='y_xent')
-
-
-			global_step = tf.train.get_or_create_global_step()
-
-			if self.dataset_name == 'cifar10':
-				momentum = 0.9
-				weight_decay = 0.0002
-				costs = []
-				print('number of trainable variables: ',len(tf.trainable_variables()))
-				for var in tf.trainable_variables():
-					if 'kernel' in var.name:
-						costs.append(tf.nn.l2_loss(var))
-				penalty = tf.add_n(costs)
-
-				loss = xent + weight_decay * penalty
-			elif self.dataset_name == 'mnist':
-				loss = xent
+	# 		xent = tf.reduce_mean(K.categorical_crossentropy(self.y_ph, self.preds), name='y_xent')
 
 
-			if self.dataset_name == 'cifar10':
-				boundaries = [40000,60000]
-				values = [0.1,0.01,0.001]
-				learning_rate = tf.train.piecewise_constant(
-					tf.cast(global_step, tf.int32),
-					boundaries,
-					values)
-				optimizer = tf.train.MomentumOptimizer(learning_rate, momentum)
-			elif self.dataset_name == 'mnist':
-				boundaries = [50000]
-				values = [1e-3,1e-4]
-				learning_rate = tf.train.piecewise_constant(
-					tf.cast(global_step, tf.int32),
-					boundaries,
-					values)
-				optimizer = tf.train.AdamOptimizer(learning_rate)
+	# 		global_step = tf.train.get_or_create_global_step()
 
-			train_step = optimizer.minimize(loss, global_step=global_step)
+	# 		if self.dataset_name == 'cifar10':
+	# 			momentum = 0.9
+	# 			weight_decay = 0.0002
+	# 			costs = []
+	# 			print('number of trainable variables: ',len(tf.trainable_variables()))
+	# 			for var in tf.trainable_variables():
+	# 				if 'kernel' in var.name:
+	# 					costs.append(tf.nn.l2_loss(var))
+	# 			penalty = tf.add_n(costs)
+
+	# 			loss = xent + weight_decay * penalty
+	# 		elif self.dataset_name == 'mnist':
+	# 			loss = xent
 
 
-			accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.preds, 1), 
-				tf.argmax(self.y_ph, 1)), tf.float32))
+	# 		if self.dataset_name == 'cifar10':
+	# 			boundaries = [40000,60000]
+	# 			values = [0.1,0.01,0.001]
+	# 			learning_rate = tf.train.piecewise_constant(
+	# 				tf.cast(global_step, tf.int32),
+	# 				boundaries,
+	# 				values)
+	# 			optimizer = tf.train.MomentumOptimizer(learning_rate, momentum)
+	# 		elif self.dataset_name == 'mnist':
+	# 			boundaries = [50000]
+	# 			values = [1e-3,1e-4]
+	# 			learning_rate = tf.train.piecewise_constant(
+	# 				tf.cast(global_step, tf.int32),
+	# 				boundaries,
+	# 				values)
+	# 			optimizer = tf.train.AdamOptimizer(learning_rate)
 
-			num_output_steps = 100 # 100
-			num_checkpoint_steps = 1000
-			batch_size = params['batch_size']
-			ii = 0
-			epochs = params['epochs']
-
-			for e in range(epochs):
-				num_batches = 0
-				for x_batch, y_batch in datagen.flow(dataset.x_train, dataset.y_train, batch_size=batch_size):
-
-					# Compute Adversarial Perturbations
-					start = time.time()
-
-					x_batch_adv = attack(x_batch, y_batch)
-
-					nat_dict = {self.input_ph: x_batch,
-					            self.y_ph: y_batch}
-
-					adv_dict = {self.input_ph: x_batch_adv,
-					            self.y_ph: y_batch}
-					eval_dict = {self.input_ph: dataset.x_train[:1000],
-					            self.y_ph: dataset.y_train[:1000]}
-					val_dict = {self.input_ph: dataset.x_val[:1000],
-					            self.y_ph: dataset.y_val[:1000]}
-					# Output to stdout
-					if ii % num_output_steps == 0:
-						nat_acc = self.sess.run(accuracy, feed_dict=eval_dict)
-						val_acc = self.sess.run(accuracy, feed_dict=val_dict)
-						adv_acc = self.sess.run(accuracy, feed_dict=adv_dict)
-
-						print('Step {} '.format(ii))
-						print('    training nat accuracy {:.4}%'.format(nat_acc * 100))
-						print('    validation accuracy {:.4}%'.format(val_acc * 100))
-						print('    training adv accuracy {:.4}%'.format(adv_acc * 100))
-
-						if ii != 0:
-							print('    {} examples per second'.format(
-							num_output_steps * batch_size / training_time))
-							training_time = 0.0
+	# 		train_step = optimizer.minimize(loss, global_step=global_step)
 
 
-					# Write a checkpoint
-					if ii % num_checkpoint_steps == 0:
-						self.model.save_weights('{}/models/adv-{}-{}.hdf5'.format(self.data_model, attack_name, ii))
+	# 		accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.preds, 1), 
+	# 			tf.argmax(self.y_ph, 1)), tf.float32))
 
-					# Actual training step
+	# 		num_output_steps = 100 # 100
+	# 		num_checkpoint_steps = 1000
+	# 		batch_size = params['batch_size']
+	# 		ii = 0
+	# 		epochs = params['epochs']
+
+	# 		for e in range(epochs):
+	# 			num_batches = 0
+	# 			for x_batch, y_batch in datagen.flow(dataset.x_train, dataset.y_train, batch_size=batch_size):
+
+	# 				# Compute Adversarial Perturbations
+	# 				start = time.time()
+
+	# 				x_batch_adv = attack(x_batch, y_batch)
+
+	# 				nat_dict = {self.input_ph: x_batch,
+	# 				            self.y_ph: y_batch}
+
+	# 				adv_dict = {self.input_ph: x_batch_adv,
+	# 				            self.y_ph: y_batch}
+	# 				eval_dict = {self.input_ph: dataset.x_train[:1000],
+	# 				            self.y_ph: dataset.y_train[:1000]}
+	# 				val_dict = {self.input_ph: dataset.x_val[:1000],
+	# 				            self.y_ph: dataset.y_val[:1000]}
+	# 				# Output to stdout
+	# 				if ii % num_output_steps == 0:
+	# 					nat_acc = self.sess.run(accuracy, feed_dict=eval_dict)
+	# 					val_acc = self.sess.run(accuracy, feed_dict=val_dict)
+	# 					adv_acc = self.sess.run(accuracy, feed_dict=adv_dict)
+
+	# 					print('Step {} '.format(ii))
+	# 					print('    training nat accuracy {:.4}%'.format(nat_acc * 100))
+	# 					print('    validation accuracy {:.4}%'.format(val_acc * 100))
+	# 					print('    training adv accuracy {:.4}%'.format(adv_acc * 100))
+
+	# 					if ii != 0:
+	# 						print('    {} examples per second'.format(
+	# 						num_output_steps * batch_size / training_time))
+	# 						training_time = 0.0
+
+
+	# 				# Write a checkpoint
+	# 				if ii % num_checkpoint_steps == 0:
+	# 					self.model.save_weights('{}/models/adv-{}-{}.hdf5'.format(self.data_model, attack_name, ii))
+
+	# 				# Actual training step
 					
-					_ = self.sess.run(train_step, feed_dict=adv_dict)
-					# print(step)
-					end = time.time()
-					training_time = end - start
-					ii += 1
-					num_batches += 1
+	# 				_ = self.sess.run(train_step, feed_dict=adv_dict)
+	# 				# print(step)
+	# 				end = time.time()
+	# 				training_time = end - start
+	# 				ii += 1
+	# 				num_batches += 1
 
-					if num_batches >= len(dataset.x_train) / batch_size:
-						break
+	# 				if num_batches >= len(dataset.x_train) / batch_size:
+	# 					break
 
-			self.model.save_weights('{}/models/adv-{}.hdf5'.format(self.data_model, attack_name))
+	# 		self.model.save_weights('{}/models/adv-{}.hdf5'.format(self.data_model, attack_name))
 
 
 
-	def predict(self, x, verbose=0, batch_size = 500, logits = False):
+	def predict(self, x, verbose=0, batch_size = 500, logits = True):
 		x = np.array(x)
 		if len(x.shape) == 3:
 			_x = np.expand_dims(x, 0) 

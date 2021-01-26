@@ -9,21 +9,13 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.platform import flags
 from keras.layers import Input
-from cleverhans.attacks import CarliniWagnerL2
-from cleverhans.dataset import MNIST
-from cleverhans.loss import CrossEntropy
-from cleverhans.utils import grid_visual, AccuracyReport
-from cleverhans.utils import set_log_level
-from cleverhans.utils_tf import model_eval, tf_model_load
-from cleverhans.train import train
-from cleverhans.utils_keras import KerasModelWrapper
 from build_model import ImageModel 
 from load_data import ImageData, split_data
 import pickle as pkl
 from keras.utils import to_categorical
-from attack_model import Attack, CW
 import scipy
 from ml_loo import generate_ml_loo_features
+from art.utils import load_cifar10
 
 
 if __name__ == '__main__':
@@ -69,13 +61,22 @@ if __name__ == '__main__':
 	###########################################################
 	
 	print('Loading original, adversarial and noisy samples...')
-	X_test = np.load('{}/data/{}_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
+	(x_train, y_train), (x_test, y_test), min_pixel_value, max_pixel_value = load_cifar10()
+	adv_idxs = np.load('../GAT/cifar10/GAT-CIFAR10/CW_AEs_idxs.npy')
+	chosen_idxs = np.random.permutation(np.arange(len(adv_idxs)))[:2000]
+	X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/CW_AEs.npy')[chosen_idxs]
+	X = x_test[adv_idxs[chosen_idxs]]
+	X_test_adv = X_adv[:1000]
+	X_test = X[:1000]
+	X_train_adv = X_adv[1000:]
+	X_train = X[1000:]
+	# X_test = np.load('{}/data/{}_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
 
-	X_test_adv = np.load('{}/data/{}_adv_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
+	# X_test_adv = np.load('{}/data/{}_adv_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
 
-	X_train = np.load('{}/data/{}_train_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
+	# X_train = np.load('{}/data/{}_train_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
 
-	X_train_adv = np.load('{}/data/{}_train_adv_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
+	# X_train_adv = np.load('{}/data/{}_train_adv_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
 
 	Y_test = model.predict(X_test)
 	print("X_test_adv: ", X_test_adv.shape)

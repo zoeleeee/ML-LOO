@@ -9,7 +9,7 @@ import time
 import numpy as np 
 import sys
 import os
-import urllib2 
+# import urllib2 
 import tarfile
 import zipfile 
 import math
