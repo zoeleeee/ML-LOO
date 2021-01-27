@@ -205,9 +205,9 @@ class Model(object):
     with tf.variable_scope('logit'):
       res_block4 = self._fully_connected(x, 10)
 
-    return [res_block10, res_block11, res_block12, res_block13, res_block14, res_block15, 
-    res_block20, res_block21, res_block22, res_block23, res_block24, res_block25, 
-    res_block30, res_block31, res_block32, res_block33, res_block34, res_block35, res_block4]
+    return [res_block10, res_block11, res_block12, res_block13, res_block14, 
+    res_block20, res_block21, res_block22, res_block23, res_block24, 
+    res_block30, res_block31, res_block32, res_block33, res_block34, res_block4]
 
   def _batch_norm(self, name, x):
     """Batch normalization."""
