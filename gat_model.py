@@ -25,9 +25,9 @@ class Model(object):
       shape=[None, 32, 32, 3])
 
     self.y_input = tf.placeholder(tf.int64, shape=[None])
-    self.pre_softmax = self.forward(self.x_input)
+    self.pre_softmax = self.forward(self.x_input)[-1]
     self.logits = self.pre_softmax
-    self.layers = self.get_activations(self.x_input)
+    self.layers = self.forward(self.x_input)
 
     if self.target_class is not None:
       self.target_logits = self.pre_softmax[:, self.target_class]
@@ -80,62 +80,62 @@ class Model(object):
     """Map a stride scalar to the stride array for tf.nn.conv2d."""
     return [1, stride, stride, 1]
 
+  # def build_model(self, x_input):
+  #   assert self.mode == 'train' or self.mode == 'eval'
+  #   """Build the core model within the graph."""
+  #   with tf.variable_scope('input'):
+
+
+
+  #     input_standardized = tf.map_fn(lambda img: tf.image.per_image_standardization(img),
+  #                              x_input)
+  #     x = self._conv('init_conv', input_standardized, 3, 3, 16, self._stride_arr(1))
+
+
+
+  #   strides = [1, 2, 2]
+  #   activate_before_residual = [True, False, False]
+  #   res_func = self._residual
+
+  #   # Uncomment the following codes to use w28-10 wide residual network.
+  #   # It is more memory efficient than very deep residual network and has
+  #   # comparably good performance.
+  #   # https://arxiv.org/pdf/1605.07146v1.pdf
+  #   filters = [16, 160, 320, 640]
+
+
+  #   # Update hps.num_residual_units to 9
+
+  #   with tf.variable_scope('unit_1_0'):
+  #     x = res_func(x, filters[0], filters[1], self._stride_arr(strides[0]),
+  #                  activate_before_residual[0])
+  #   for i in range(1, 5):
+  #     with tf.variable_scope('unit_1_%d' % i):
+  #       x = res_func(x, filters[1], filters[1], self._stride_arr(1), False)
+
+  #   with tf.variable_scope('unit_2_0'):
+  #     x = res_func(x, filters[1], filters[2], self._stride_arr(strides[1]),
+  #                  activate_before_residual[1])
+  #   for i in range(1, 5):
+  #     with tf.variable_scope('unit_2_%d' % i):
+  #       x = res_func(x, filters[2], filters[2], self._stride_arr(1), False)
+
+  #   with tf.variable_scope('unit_3_0'):
+  #     x = res_func(x, filters[2], filters[3], self._stride_arr(strides[2]),
+  #                  activate_before_residual[2])
+  #   for i in range(1, 5):
+  #     with tf.variable_scope('unit_3_%d' % i):
+  #       x = res_func(x, filters[3], filters[3], self._stride_arr(1), False)
+
+  #   with tf.variable_scope('unit_last'):
+  #     x = self._batch_norm('final_bn', x)
+  #     x = self._relu(x, 0.1)
+  #     x = self._global_avg_pool(x)
+
+  #   with tf.variable_scope('logit'):
+  #     return self._fully_connected(x, 10)
+
   def build_model(self, x_input):
-    assert self.mode == 'train' or self.mode == 'eval'
-    """Build the core model within the graph."""
-    with tf.variable_scope('input'):
-
-
-
-      input_standardized = tf.map_fn(lambda img: tf.image.per_image_standardization(img),
-                               x_input)
-      x = self._conv('init_conv', input_standardized, 3, 3, 16, self._stride_arr(1))
-
-
-
-    strides = [1, 2, 2]
-    activate_before_residual = [True, False, False]
-    res_func = self._residual
-
-    # Uncomment the following codes to use w28-10 wide residual network.
-    # It is more memory efficient than very deep residual network and has
-    # comparably good performance.
-    # https://arxiv.org/pdf/1605.07146v1.pdf
-    filters = [16, 160, 320, 640]
-
-
-    # Update hps.num_residual_units to 9
-
-    with tf.variable_scope('unit_1_0'):
-      x = res_func(x, filters[0], filters[1], self._stride_arr(strides[0]),
-                   activate_before_residual[0])
-    for i in range(1, 5):
-      with tf.variable_scope('unit_1_%d' % i):
-        x = res_func(x, filters[1], filters[1], self._stride_arr(1), False)
-
-    with tf.variable_scope('unit_2_0'):
-      x = res_func(x, filters[1], filters[2], self._stride_arr(strides[1]),
-                   activate_before_residual[1])
-    for i in range(1, 5):
-      with tf.variable_scope('unit_2_%d' % i):
-        x = res_func(x, filters[2], filters[2], self._stride_arr(1), False)
-
-    with tf.variable_scope('unit_3_0'):
-      x = res_func(x, filters[2], filters[3], self._stride_arr(strides[2]),
-                   activate_before_residual[2])
-    for i in range(1, 5):
-      with tf.variable_scope('unit_3_%d' % i):
-        x = res_func(x, filters[3], filters[3], self._stride_arr(1), False)
-
-    with tf.variable_scope('unit_last'):
-      x = self._batch_norm('final_bn', x)
-      x = self._relu(x, 0.1)
-      x = self._global_avg_pool(x)
-
-    with tf.variable_scope('logit'):
-      return self._fully_connected(x, 10)
-
-  def get_activations(self, x_input):
     assert self.mode == 'train' or self.mode == 'eval'
     """Build the core model within the graph."""
     with tf.variable_scope('input'):
@@ -211,8 +211,8 @@ class Model(object):
     with tf.variable_scope('logit'):
       res_block4 = self._fully_connected(x, 10)
 
-    return [res_block10, res_block11, res_block12, res_block13, res_block14, res_block15, res_block20, 
-    res_block21, res_block22, res_block23, res_block24, res_block25, 
+    return [res_block10, res_block11, res_block12, res_block13, res_block14, res_block15, 
+    res_block20, res_block21, res_block22, res_block23, res_block24, res_block25, 
     res_block30, res_block31, res_block32, res_block33, res_block34, res_block35, res_block4]
 
   def _batch_norm(self, name, x):
