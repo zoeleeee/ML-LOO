@@ -538,18 +538,3 @@ class ImageModel():
  
             # [num_data, length]
             return np.concatenate(class_specific_scores, axis = 0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
