@@ -172,11 +172,9 @@ class Model(object):
       res_block13 = res_func(res_block12, filters[1], filters[1], self._stride_arr(1), False)
     with tf.variable_scope('unit_1_4'):
       res_block14 = res_func(res_block13, filters[1], filters[1], self._stride_arr(1), False)
-    with tf.variable_scope('unit_1_5'):
-      res_block15 = res_func(res_block14, filters[1], filters[1], self._stride_arr(1), False)
-
+    
     with tf.variable_scope('unit_2_0'):
-      res_block20 = res_func(res_block15, filters[1], filters[2], self._stride_arr(strides[1]),
+      res_block20 = res_func(res_block14, filters[1], filters[2], self._stride_arr(strides[1]),
                    activate_before_residual[1])
     with tf.variable_scope('unit_2_1'):
       res_block21 = res_func(res_block20, filters[2], filters[2], self._stride_arr(1), False)
@@ -186,11 +184,9 @@ class Model(object):
       res_block23 = res_func(res_block22, filters[2], filters[2], self._stride_arr(1), False)
     with tf.variable_scope('unit_2_4'):
       res_block24 = res_func(res_block23, filters[2], filters[2], self._stride_arr(1), False)
-    with tf.variable_scope('unit_2_5'):
-      res_block25 = res_func(res_block24, filters[2], filters[2], self._stride_arr(1), False)
-
+    
     with tf.variable_scope('unit_3_0'):
-      res_block30 = res_func(res_block25, filters[2], filters[3], self._stride_arr(strides[2]),
+      res_block30 = res_func(res_block24, filters[2], filters[3], self._stride_arr(strides[2]),
                    activate_before_residual[2])
     with tf.variable_scope('unit_3_1'):
       res_block31 = res_func(res_block30, filters[3], filters[3], self._stride_arr(1), False)
@@ -200,11 +196,9 @@ class Model(object):
       res_block33 = res_func(res_block32, filters[3], filters[3], self._stride_arr(1), False)
     with tf.variable_scope('unit_3_4'):
       res_block34 = res_func(res_block33, filters[3], filters[3], self._stride_arr(1), False)
-    with tf.variable_scope('unit_3_5'):
-      res_block35 = res_func(res_block34, filters[3], filters[3], self._stride_arr(1), False)
-
+    
     with tf.variable_scope('unit_last'):
-      x = self._batch_norm('final_bn', res_block35)
+      x = self._batch_norm('final_bn', res_block34)
       x = self._relu(x, 0.1)
       x = self._global_avg_pool(x)
 
