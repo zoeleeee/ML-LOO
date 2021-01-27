@@ -62,9 +62,9 @@ if __name__ == '__main__':
 	
 	print('Loading original, adversarial and noisy samples...')
 	(x_train, y_train), (x_test, y_test), min_pixel_value, max_pixel_value = load_cifar10()
-	adv_idxs = np.load('../GAT/cifar10/GAT-CIFAR10/CW_AEs_idxs.npy')
+	adv_idxs = np.load('../GAT/cifar10/GAT-CIFAR10/AES/CW_AEs_idxs.npy')
 	chosen_idxs = np.random.permutation(np.arange(len(adv_idxs)))[:2000]
-	X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/CW_AEs.npy')[chosen_idxs]
+	X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/AES/CW_AEs.npy')[chosen_idxs]
 	X = x_test[adv_idxs[chosen_idxs]]
 	X_test_adv = X_adv[:1000]
 	X_test = X[:1000]

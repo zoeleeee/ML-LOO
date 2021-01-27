@@ -174,7 +174,7 @@ class ImageModel():
                                     scope='classifier')
                 classifier_saver = tf.train.Saver(var_list=classifier_vars)
                 classifier_checkpoint = '../GAT/cifar10/GAT-CIFAR10/models/naturally_trained_prefixed_classifier/checkpoint-70000'
-                classifier_saver.restore(sess, classifier_checkpoint)
+                classifier_saver.restore(self.sess, classifier_checkpoint)
             elif load != False:
                 self.model.load_weights('{}/models/{}.hdf5'.format(self.data_model, load), 
                     by_name=True)
