@@ -3,9 +3,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 try:
-	import cPickle as pickle 
+    import cPickle as pickle 
 except:
-	import _pickle as pickle
+    import _pickle as pickle
 import logging
 import os
 import numpy as np
@@ -28,150 +28,142 @@ from sklearn.metrics import precision_recall_curve, roc_curve, auc, average_prec
 
 
 color_dict = {
-	'ml_loo': 'red',
+    'ml_loo': 'red',
 }
 
 linestyles = {
-	'ml_loo': '-',
+    'ml_loo': '-',
 }
 
 labels = {
-	'ml_loo': 'ML-LOO',
+    'ml_loo': 'ML-LOO',
 }
 
 labels_attack = { 
-	'cw': 'C&W', 
+    'cw': 'C&W', 
 }
 
 labels_data = {
-	'cifar10': 'CIFAR-10',
+    'cifar10': 'CIFAR-10',
 }
 
 labels_model = {
-	'resnet': 'ResNet',
+    'resnet': 'ResNet',
 }
 
 
 def load_data(args, attack, det, magnitude = 0.0):
-	x, y = {}, {}
-	for data_type in ['train', 'test']:
-		if det == 'ml_loo':
-			data_ori = np.load('{}/data/{}_{}_{}_{}_{}.npy'.format(
-				args.data_model,
-				args.data_sample,
-				data_type,
-				'ori',
-				attack, 
-				'ml_loo'))
+    x, y = {}, {}
+    for data_type in ['train', 'test']:
+        if det == 'ml_loo':
+            data_ori = np.load('{}/data/{}_{}_{}_{}_{}.npy'.format(
+                args.data_model,
+                args.data_sample,
+                data_type,
+                'ori',
+                attack, 
+                'ml_loo'))
 
-			data_adv = np.load('{}/data/{}_{}_{}_{}_{}.npy'.format(
-				args.data_model,
-				args.data_sample,
-				data_type,
-				'adv',
-				attack, 
-				'ml_loo'))
-			d = len(data_ori)
-			print('detect using {}'.format(det))
-			print('using adv only')
-			print('data_ori', data_ori.shape) 
-			# Use only IQR features (5th dimension).
-			data_ori = data_ori[:, [5], :]
-			data_adv = data_adv[:, [5], :]
-			data_ori = data_ori.reshape(d, -1)
-			data_adv = data_adv.reshape(d, -1)
-			# (200, 1)
+            data_adv = np.load('{}/data/{}_{}_{}_{}_{}.npy'.format(
+                args.data_model,
+                args.data_sample,
+                data_type,
+                'adv',
+                attack, 
+                'ml_loo'))
+            d = len(data_ori)
+            print('detect using {}'.format(det))
+            print('using adv only')
+            print('data_ori', data_ori.shape) 
+            # Use only IQR features (5th dimension).
+            data_ori = data_ori[:, [5], :]
+            data_adv = data_adv[:, [5], :]
+            data_ori = data_ori.reshape(d, -1)
+            data_adv = data_adv.reshape(d, -1)
+            # (200, 1)
 
-		d = len(data_ori)
-		x[data_type] = np.vstack([data_ori, data_adv])
-		y[data_type] = np.concatenate((np.zeros(d), np.ones(d)))
+        d = len(data_ori)
+        x[data_type] = np.vstack([data_ori, data_adv])
+        y[data_type] = np.concatenate((np.zeros(d), np.ones(d)))
 
 
-	idx_train = np.random.permutation(len(x['train']))
-	x['train'] = x['train'][idx_train]  
-	y['train'] = y['train'][idx_train]
-	return x, y
+    idx_train = np.random.permutation(len(x['train']))
+    x['train'] = x['train'][idx_train]  
+    y['train'] = y['train'][idx_train]
+    return x, y
 
 
 def train_and_evaluate(args, detections, attack, fpr_upper = 1.0):
-	plt.figure(figsize = (10, 8))
-	font = {'weight': 'bold', 'size': 16}
-	matplotlib.rc('font', **font)
+    plt.figure(figsize = (10, 8))
+    font = {'weight': 'bold', 'size': 16}
+    matplotlib.rc('font', **font)
 
-	auc_dict = {}
-	tpr1 = {}
-	tpr5 = {}
-	tpr10 = {}
+    auc_dict = {}
+    tpr1 = {}
+    tpr5 = {}
+    tpr10 = {}
 
-	for det in detections:
-		# Load data
-		x, y = load_data(args, attack, det)
-		x_train, y_train = x['train'], y['train']
-		x_test, y_test = x['test'], y['test']
-		x_train = x_train.reshape(len(x_train), -1)
-		x_test = x_test.reshape(len(x_test), -1)
-		# Train
-		lr = LogisticRegressionCV(n_jobs=-1).fit(x_train, y_train) 
-		# Predict
-		pred = lr.predict_proba(x_test)[:, 1] 
-		pred = lr.predict_proba(x_test)[:, 1] 
-		# Evaluate.
-		fpr, tpr, thresholds = roc_curve(y_test, pred)
-		def find_nearest(array, value):
-			array = np.asarray(array)
-			idx = (np.abs(array - value)).argmin()
-			return idx
-		auc_dict[det] = auc(fpr, tpr)
-		tpr1[det] = tpr[find_nearest(fpr, 0.01)]
-		tpr5[det] = tpr[find_nearest(fpr, 0.05)]
-		tpr10[det] = tpr[find_nearest(fpr, 0.10)]
-		plt.plot(
-			fpr, tpr,
-			label="{0} (AUC: {1:0.3f})".format(labels[det], auc(fpr, tpr)),
-			color=color_dict[det], 
-			linestyle=linestyles[det], 
-			linewidth=4)
+    for det in detections:
+        # Load data
+        x, y = load_data(args, attack, det)
+        x_train, y_train = x['train'], y['train']
+        x_test, y_test = x['test'], y['test']
+        x_train = x_train.reshape(len(x_train), -1)
+        x_test = x_test.reshape(len(x_test), -1)
+        # Train
+        lr = LogisticRegressionCV(n_jobs=-1).fit(x_train, y_train) 
+        # Predict
+        pred = lr.predict_proba(x_test)[:, 1] 
+        pred = lr.predict_proba(x_test)[:, 1] 
+        # Evaluate.
+        fpr, tpr, thresholds = roc_curve(y_test, pred)
+        def find_nearest(array, value):
+            array = np.asarray(array)
+            idx = (np.abs(array - value)).argmin()
+            return idx
+        auc_dict[det] = auc(fpr, tpr)
+        tpr1[det] = tpr[find_nearest(fpr, 0.01)]
+        tpr5[det] = tpr[find_nearest(fpr, 0.05)]
+        tpr10[det] = tpr[find_nearest(fpr, 0.10)]
+        plt.plot(
+            fpr, tpr,
+            label="{0} (AUC: {1:0.3f})".format(labels[det], auc(fpr, tpr)),
+            color=color_dict[det], 
+            linestyle=linestyles[det], 
+            linewidth=4)
 
-	plt.xlim([0.0, fpr_upper])
-	plt.ylim([0.0, 1.0])
-	plt.xlabel('False Positive Rate', fontsize = 32)
-	plt.ylabel('True Positive Rate', fontsize = 32)
-	plt.title('{} ({}, {})'.format(labels_attack[attack], labels_data[args.dataset_name], labels_model[args.model_name]), fontsize = 32) 
-	plt.legend(loc="lower right", fontsize = 22)
-	plt.show()
-	figure_name = '{}/figs/mad_transfer_roc_{}_{}_{}.pdf'.format(args.data_model, args.data_sample, attack, attack)
-	plt.savefig(figure_name)
+    plt.xlim([0.0, fpr_upper])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('False Positive Rate', fontsize = 32)
+    plt.ylabel('True Positive Rate', fontsize = 32)
+    plt.title('{} ({}, {})'.format(labels_attack[attack], labels_data[args.dataset_name], labels_model[args.model_name]), fontsize = 32) 
+    plt.legend(loc="lower right", fontsize = 22)
+    plt.show()
+    figure_name = '{}/figs/mad_transfer_roc_{}_{}_{}.pdf'.format(args.data_model, args.data_sample, attack, attack)
+    plt.savefig(figure_name)
 
-	return auc_dict, tpr1, tpr5, tpr10 
+    return auc_dict, tpr1, tpr5, tpr10 
 
 
 if __name__ == '__main__':
-	import argparse
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--dataset_name', type = str, 
-		choices = ['cifar10'], 
-		default = 'cifar10')
-	parser.add_argument('--model_name', type = str, 
-		choices = ['resnet'], 
-		default = 'resnet') 
-	parser.add_argument('--data_sample', type = str, 
-		choices = ['x_val200'], 
-		default = 'x_val200') 
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_name', type = str, 
+        choices = ['cifar10'], 
+        default = 'cifar10')
+    parser.add_argument('--model_name', type = str, 
+        choices = ['resnet'], 
+        default = 'resnet') 
+    parser.add_argument('--data_sample', type = str, 
+        choices = ['x_val200'], 
+        default = 'x_val200') 
 
-	args = parser.parse_args()
-	dict_a = vars(args) 
-	args.data_model = args.dataset_name + args.model_name
+    args = parser.parse_args()
+    dict_a = vars(args) 
+    args.data_model = args.dataset_name + args.model_name
 
-	auc_dict, tpr1, tpr5, tpr10 = train_and_evaluate(args, ['ml_loo'], 'cw', fpr_upper = 1.0)
-        print('AUC:', auc_dict)
-        print('tpr@0.01', tpr1)
-        print('tpr@0.05', tpr5)
-        print('tpr@0.1', tpr10)
-
-
-
-
-
-
-
-
+    auc_dict, tpr1, tpr5, tpr10 = train_and_evaluate(args, ['ml_loo'], 'cw', fpr_upper = 1.0)
+    print('AUC:', auc_dict)
+    print('tpr@0.01', tpr1)
+    print('tpr@0.05', tpr5)
+    print('tpr@0.1', tpr10)
