@@ -37,8 +37,8 @@ if __name__ == '__main__':
 	parser.add_argument(
 		'--attack', 
 		type = str, 
-		choices = ['cw'], 
-		default = 'cw'
+		choices = ['CW', 'FGSM', 'PGD'], 
+		default = 'CW'
 	)
 
 	parser.add_argument(
@@ -61,15 +61,17 @@ if __name__ == '__main__':
 	###########################################################
 	
 	print('Loading original, adversarial and noisy samples...')
+	assert os.path.exists('../GAT/cifar10/GAT-CIFAR10/AES/hamming_succ_0.9_{}_AE.npy'.format(args.attack)), 'test D^2 first'
 	(x_train, y_train), (x_test, y_test), min_pixel_value, max_pixel_value = load_cifar10()
-	adv_idxs = np.load('../GAT/cifar10/GAT-CIFAR10/AES/CW_AEs_idxs.npy')
-	chosen_idxs = np.random.permutation(np.arange(len(adv_idxs)))[:2000]
-	X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/AES/CW_AEs.npy')[chosen_idxs]
-	X = x_test[adv_idxs[chosen_idxs]]
-	X_test_adv = X_adv[:1000]
-	X_test = X[:1000]
-	X_train_adv = X_adv[1000:]
-	X_train = X[1000:]
+	idxs = np.load('../GAT/cifar10/GAT-CIFAR10/AES/{}_AEs_idxs.npy'.format(args.attack))
+	test_mask = np.load('../GAT/cifar10/GAT-CIFAR10/AES/hamming_succ_0.9_{}_AE.npy'.format(args.attack))
+	train_mask = np.random.permutation(np.arange(len(test_mask))[1-test_mask])[:1000]
+
+	X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/AES/{}_AEs.npy'.format(args.attack))[chosen_idxs]
+	X_test_adv = X_adv[test_mask]
+	X_test = x_test[idxs[test_idxs]]
+	X_train_adv = X_adv[train_mask]
+	X_train = x_test[idxs[train_mask]]
 	# X_test = np.load('{}/data/{}_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
 
 	# X_test_adv = np.load('{}/data/{}_adv_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
