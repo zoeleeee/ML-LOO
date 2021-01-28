@@ -162,7 +162,12 @@ if __name__ == '__main__':
 	dict_a = vars(args) 
 	args.data_model = args.dataset_name + args.model_name
 
-	train_and_evaluate(args, ['ml_loo'], 'cw', fpr_upper = 1.0)
+	auc_dict, tpr1, tpr5, tpr10 = train_and_evaluate(args, ['ml_loo'], 'cw', fpr_upper = 1.0)
+        print('AUC:', auc_dict)
+        print('tpr@0.01', tpr1)
+        print('tpr@0.05', tpr5)
+        print('tpr@0.1', tpr10)
+
 
 
 

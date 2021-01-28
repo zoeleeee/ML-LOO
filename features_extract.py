@@ -67,9 +67,9 @@ if __name__ == '__main__':
 	test_mask = np.load('../GAT/cifar10/GAT-CIFAR10/AES/hamming_succ_0.9_{}_AE.npy'.format(args.attack))
 	train_mask = np.random.permutation(np.arange(len(test_mask))[1-test_mask])[:1000]
 
-	X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/AES/{}_AEs.npy'.format(args.attack))[chosen_idxs]
+	X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/AES/{}_AEs.npy'.format(args.attack))
 	X_test_adv = X_adv[test_mask]
-	X_test = x_test[idxs[test_idxs]]
+	X_test = x_test[idxs[test_mask]]
 	X_train_adv = X_adv[train_mask]
 	X_train = x_test[idxs[train_mask]]
 	# X_test = np.load('{}/data/{}_{}_{}.npy'.format(data_model, args.data_sample, args.attack, 'ori'))
