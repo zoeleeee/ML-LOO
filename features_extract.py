@@ -61,13 +61,18 @@ if __name__ == '__main__':
 	###########################################################
 	
 	print('Loading original, adversarial and noisy samples...')
-	assert os.path.exists('../GAT/cifar10/GAT-CIFAR10/AES/hamming_succ_0.9_{}_AE.npy'.format(args.attack)), 'test D^2 first'
+	assert os.path.exists('../pytorch-classification/third_black_box/hamming_succ_0.9_densenet_{}_AE.npy'.format(args.attack)), 'test D^2 first'
+#	assert os.path.exists('../GAT/cifar10/GAT-CIFAR10/AES/hamming_succ_0.9_{}_AE.npy'.format(args.attack)), 'test D^2 first'
 	(x_train, y_train), (x_test, y_test), min_pixel_value, max_pixel_value = load_cifar10()
-	idxs = np.load('../GAT/cifar10/GAT-CIFAR10/AES/{}_AEs_idxs.npy'.format(args.attack))
-	test_mask = np.load('../GAT/cifar10/GAT-CIFAR10/AES/hamming_succ_0.9_{}_AE.npy'.format(args.attack))
+	idxs = np.load('../pytorch-classification/third_black_box/{}_AEs_idxs.npy'.format(args.attack))
+	#idxs = np.load('../GAT/cifar10/GAT-CIFAR10/AES/{}_AEs_idxs.npy'.format(args.attack))
+	#test_mask = np.load('../GAT/cifar10/GAT-CIFAR10/AES/hamming_succ_0.9_{}_AE.npy'.format(args.attack))
+	test_mask = np.load('../pytorch-classification/third_black_box/hamming_succ_0.9_densenet_{}_AE.npy'.format(args.attack))
 	train_mask = np.random.permutation(np.arange(len(test_mask))[1-test_mask])[:1000]
 
-	X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/AES/{}_AEs.npy'.format(args.attack))
+	#X_adv = np.load('../GAT/cifar10/GAT-CIFAR10/AES/{}_AEs.npy'.format(args.attack))
+	X_adv = np.load('../pytorch-classification/third_black_box/{}_AEs.npy'.format(args.attack))
+        if np.argmin(X_adv.shape) == 1: X_adv = np.transpose(X_adv, (0,2,3,1))
 	X_test_adv = X_adv[test_mask]
 	X_test = x_test[idxs[test_mask]]
 	X_train_adv = X_adv[train_mask]
@@ -111,7 +116,7 @@ if __name__ == '__main__':
 
 		for data_type in ['test', 'train']:
 			for category in ['original', 'adv']:
-				np.save('{}/data/{}_{}_{}_{}_{}.npy'.format(
+				np.save('{}/densenet_data/{}_{}_{}_{}_{}.npy'.format(
 					data_model,
 					args.data_sample,
 					dt[data_type],
